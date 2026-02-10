@@ -181,6 +181,7 @@ class Robot:
         """현재 주문을 취소한다."""
         self._order_cancelled = True
         self._navigation_active = False
+        self.paused = False
         self.driving = False
         self.velocity_vx = 0.0
         self.velocity_vy = 0.0
