@@ -47,9 +47,9 @@ class Simulator:
         self._config = config
         self._loop: asyncio.AbstractEventLoop | None = None
         self._robot = Robot(config)
-        self._action_handler = ActionHandler(self._robot)
-        self._robot.set_action_handler(self._action_handler)
         self._order_manager = OrderManager(self._robot)
+        self._action_handler = ActionHandler(self._robot, self._order_manager)
+        self._robot.set_action_handler(self._action_handler)
         self._mqtt = MqttClient(config)
         self._state_publisher = StatePublisher(self._robot, self._mqtt, config)
 

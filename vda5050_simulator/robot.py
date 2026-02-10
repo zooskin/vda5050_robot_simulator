@@ -201,6 +201,8 @@ class Robot:
                 self.velocity_vx = 0.0
                 self.velocity_vy = 0.0
                 self.velocity_omega = 0.0
+                if self.paused and self._navigation_active:
+                    self.driving = False
                 continue
 
             if self._current_node_index >= len(self._nodes):

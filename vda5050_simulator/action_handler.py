@@ -10,6 +10,7 @@ from .models import Action, ActionState, Load
 
 if TYPE_CHECKING:
     from .robot import Robot
+    from .order_manager import OrderManager
 
 logger = logging.getLogger(__name__)
 
@@ -29,8 +30,9 @@ ACTION_DURATIONS = {
 
 
 class ActionHandler:
-    def __init__(self, robot: Robot):
+    def __init__(self, robot: Robot, order_manager: OrderManager | None = None):
         self._robot = robot
+        self._order_manager = order_manager
         self._running_tasks: dict[str, asyncio.Task] = {}
 
     def create_action_state(self, action: Action, initial_status: str = "WAITING") -> ActionState:
@@ -136,6 +138,10 @@ class ActionHandler:
 
         # 이동 중지
         self._robot.cancel_current_order()
+
+        # OrderManager의 현재 주문도 클리어
+        if self._order_manager:
+            self._order_manager.clear_order()
 
         action_state.actionStatus = "FINISHED"
         action_state.resultDescription = "Order cancelled"
