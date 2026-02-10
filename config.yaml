@@ -16,9 +16,9 @@ robots:
   - serial_number: "AGV_001"
     initial_position: { x: 8, y: -10.8, theta: 0.0, map_id: "L1" }
   - serial_number: "AGV_002"
-    initial_position: { x: 10, y: -10.8, theta: 0.0, map_id: "L1" }
-  - serial_number: "AGV_003"
-    initial_position: { x: 12, y: -10.8, theta: 0.0, map_id: "L1" }
+    initial_position: { x: 9.37, y: -11.14, theta: 0.0, map_id: "L1" }
+  # - serial_number: "AGV_003"
+  # initial_position: { x: 12, y: -10.8, theta: 0.0, map_id: "L1" }
 
 publishing:
   state_interval: 0.5
