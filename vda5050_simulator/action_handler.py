@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 
 # 액션 시뮬레이션 소요 시간 (초)
 ACTION_DURATIONS = {
-    "pick": 3.0,
-    "drop": 3.0,
+    "pick": 5.0,
+    "drop": 5.0,
     "startCharging": 1.0,
     "stopCharging": 1.0,
     "initPosition": 0.5,
