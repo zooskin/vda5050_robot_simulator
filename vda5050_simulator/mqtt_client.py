@@ -80,7 +80,7 @@ class MqttClient:
         logger.info("MQTT 연결 종료")
 
     def _on_connect(self, client, userdata, flags, rc, properties=None):
-        if rc == 0:
+        if rc == 0 or (hasattr(rc, 'value') and rc.value == 0):
             logger.info("MQTT 연결 성공")
             # 토픽 구독
             order_topic = f"{self._topic_prefix}/order"
@@ -91,11 +91,11 @@ class MqttClient:
             # ONLINE 발행
             self.publish_connection("ONLINE")
         else:
-            logger.error("MQTT 연결 실패: rc=%d", rc)
+            logger.error("MQTT 연결 실패: rc=%s", rc)
 
     def _on_disconnect(self, client, userdata, flags, rc, properties=None):
-        if rc != 0:
-            logger.warning("MQTT 비정상 연결 해제: rc=%d", rc)
+        if rc != 0 and not (hasattr(rc, 'value') and rc.value == 0):
+            logger.warning("MQTT 비정상 연결 해제: rc=%s", rc)
 
     def _on_message(self, client, userdata, msg):
         topic = msg.topic
