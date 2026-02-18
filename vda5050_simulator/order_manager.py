@@ -115,27 +115,31 @@ class OrderManager:
         return True
 
     def _validate_sequence_ids(self, order: Order) -> bool:
-        """노드/엣지 sequenceId 검증."""
+        """노드/엣지 sequenceId 검증 (order update 시 0이 아닌 시작값 허용)."""
+        if not order.nodes:
+            return True
+
+        start_seq = order.nodes[0].sequenceId
         for i, node in enumerate(order.nodes):
-            expected = i * 2
+            expected = start_seq + i * 2
             if node.sequenceId != expected:
                 self._add_error(
                     "orderError", "WARNING",
                     f"노드 sequenceId 불일치: nodeId={node.nodeId}, "
                     f"expected={expected}, got={node.sequenceId}",
-                    "노드 sequenceId는 0, 2, 4... 이어야 합니다",
+                    "노드 sequenceId는 짝수이고 2씩 증가해야 합니다",
                     [ErrorReference("nodeId", node.nodeId)],
                 )
                 return False
 
         for i, edge in enumerate(order.edges):
-            expected = i * 2 + 1
+            expected = start_seq + i * 2 + 1
             if edge.sequenceId != expected:
                 self._add_error(
                     "orderError", "WARNING",
                     f"엣지 sequenceId 불일치: edgeId={edge.edgeId}, "
                     f"expected={expected}, got={edge.sequenceId}",
-                    "엣지 sequenceId는 1, 3, 5... 이어야 합니다",
+                    "엣지 sequenceId는 홀수이고 2씩 증가해야 합니다",
                     [ErrorReference("edgeId", edge.edgeId)],
                 )
                 return False

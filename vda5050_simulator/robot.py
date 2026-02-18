@@ -139,37 +139,46 @@ class Robot:
                 astate = self._action_handler.create_action_state(action, "WAITING")
                 self.action_states.append(astate)
 
-        # 첫 노드 처리
+        # 첫 노드(stitching 노드) 처리
         first_node = nodes[0]
-        if first_node.nodePosition:
-            # 첫 노드 위치로 즉시 이동 (이미 그 위치에 있다고 가정)
-            self.position_x = first_node.nodePosition.x
-            self.position_y = first_node.nodePosition.y
-            if first_node.nodePosition.theta is not None:
-                self.position_theta = first_node.nodePosition.theta
-            self.map_id = first_node.nodePosition.mapId
+        already_at_first = (self.last_node_id == first_node.nodeId)
 
-        self.last_node_id = first_node.nodeId
-        self.last_node_sequence_id = first_node.sequenceId
-        self.distance_since_last_node = 0.0
+        if already_at_first:
+            # 이미 stitching 노드에 도착한 상태
+            if first_node.nodePosition:
+                self.position_x = first_node.nodePosition.x
+                self.position_y = first_node.nodePosition.y
+                if first_node.nodePosition.theta is not None:
+                    self.position_theta = first_node.nodePosition.theta
+                self.map_id = first_node.nodePosition.mapId
 
-        # 첫 노드를 nodeStates에서 제거 (이미 통과)
-        self.node_states = [ns for ns in self.node_states if ns.sequenceId != first_node.sequenceId]
+            self.last_node_id = first_node.nodeId
+            self.last_node_sequence_id = first_node.sequenceId
+            self.distance_since_last_node = 0.0
 
-        # 네비게이션 시작 설정
-        self._current_node_index = 1  # 다음 목표는 두 번째 노드
-        self._current_edge_index = 0
+            # 첫 노드를 nodeStates에서 제거 (이미 통과)
+            self.node_states = [ns for ns in self.node_states if ns.sequenceId != first_node.sequenceId]
 
-        if len(nodes) > 1:
+            # 네비게이션 시작 설정
+            self._current_node_index = 1  # 다음 목표는 두 번째 노드
+            self._current_edge_index = 0
+
+            if len(nodes) > 1:
+                self._navigation_active = True
+                self.driving = True
+            else:
+                self._navigation_active = False
+                self.driving = False
+
+            # 첫 노드 액션 트리거
+            asyncio.ensure_future(self._trigger_node_actions(first_node))
+        else:
+            # 아직 stitching 노드에 도착하지 않은 상태
+            # 현재 위치를 유지하고 stitching 노드를 향해 계속 이동
+            self._current_node_index = 0
+            self._current_edge_index = -1  # stitching 노드 이전에는 이 order의 엣지 없음
             self._navigation_active = True
             self.driving = True
-        else:
-            # 노드가 하나뿐이면 주행 완료
-            self._navigation_active = False
-            self.driving = False
-
-        # 첫 노드 액션 트리거
-        asyncio.ensure_future(self._trigger_node_actions(first_node))
 
         self.notify_state_change()
         logger.info(
@@ -247,7 +256,7 @@ class Robot:
 
             # 현재 엣지의 maxSpeed 또는 기본 속도
             speed = self._max_speed
-            if self._current_edge_index < len(self._edges):
+            if 0 <= self._current_edge_index < len(self._edges):
                 edge = self._edges[self._current_edge_index]
                 if edge.maxSpeed is not None:
                     speed = edge.maxSpeed
@@ -300,7 +309,7 @@ class Robot:
         ]
 
         # 이전 엣지 완료 (edgeStates에서 제거)
-        if self._current_edge_index < len(self._edges):
+        if 0 <= self._current_edge_index < len(self._edges):
             completed_edge = self._edges[self._current_edge_index]
             self.edge_states = [
                 es for es in self.edge_states if es.sequenceId != completed_edge.sequenceId
