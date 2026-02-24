@@ -55,6 +55,7 @@ class Robot:
         # 배터리
         self._battery_charge: float = bat_cfg["initial_charge"]
         self._discharge_rate: float = bat_cfg["discharge_rate"]
+        self._charge_rate: float = bat_cfg.get("charge_rate", 0.1)
         self.battery_state_charging: bool = False
 
         # 주문 상태
@@ -374,7 +375,17 @@ class Robot:
         while True:
             await asyncio.sleep(1.0)
             if self.battery_state_charging and self._battery_charge < 100.0:
-                self._battery_charge = min(100.0, self._battery_charge + 0.1)
+                old_charge = self._battery_charge
+                self._battery_charge = min(
+                    100.0, self._battery_charge + self._charge_rate
+                )
+                old_tens = int(old_charge) // 10
+                new_tens = int(self._battery_charge) // 10
+                if new_tens > old_tens:
+                    logger.info(
+                        "배터리 충전 중: %.1f%% (rate=%.1f%%/s)",
+                        self._battery_charge, self._charge_rate,
+                    )
 
     def get_agv_position(self) -> AgvPosition:
         return AgvPosition(
