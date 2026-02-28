@@ -90,6 +90,7 @@ class Robot:
         self._current_edge_index: int = 0  # 현재 주행 중인 엣지 인덱스
         self._navigation_active: bool = False
         self._order_cancelled: bool = False
+        self._download_map_pending_action_id: str | None = None
 
         # 상태 변경 콜백
         self._state_change_callback: Callable | None = None
@@ -109,6 +110,22 @@ class Robot:
     def notify_state_change(self):
         if self._state_change_callback:
             self._state_change_callback()
+
+    def set_download_map_pending(self, action_id: str):
+        """downloadMap 액션 pending 설정."""
+        self._download_map_pending_action_id = action_id
+        logger.info("downloadMap pending 설정: %s", action_id)
+
+    def is_download_map_ready(self) -> bool:
+        """downloadMap 완료 여부 확인."""
+        if self._download_map_pending_action_id is None:
+            return True
+        for astate in self.action_states:
+            if astate.actionId == self._download_map_pending_action_id:
+                if astate.actionStatus in ("FINISHED", "FAILED"):
+                    return True
+                return False
+        return True
 
     def apply_order(
         self,
@@ -214,6 +231,14 @@ class Robot:
                 self.velocity_omega = 0.0
                 if self.paused and self._navigation_active:
                     self.driving = False
+                continue
+
+            # downloadMap 완료 대기
+            if not self.is_download_map_ready():
+                self.velocity_vx = 0.0
+                self.velocity_vy = 0.0
+                self.velocity_omega = 0.0
+                self.driving = False
                 continue
 
             if self._current_node_index >= len(self._nodes):

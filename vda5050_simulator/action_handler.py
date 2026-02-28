@@ -6,7 +6,7 @@ import asyncio
 import logging
 from typing import TYPE_CHECKING
 
-from .models import Action, ActionState, Load
+from .models import Action, ActionState, Load, MapState
 
 if TYPE_CHECKING:
     from .robot import Robot
@@ -26,6 +26,7 @@ ACTION_DURATIONS = {
     "stopPause": 0.0,
     "cancelOrder": 0.0,
     "factsheetRequest": 0.0,
+    "downloadMap": 3.0,  # 맵 다운로드 시뮬레이션
 }
 
 
@@ -97,6 +98,10 @@ class ActionHandler:
 
             elif action_type == "initPosition":
                 self._handle_init_position(action)
+
+            elif action_type == "downloadMap":
+                self._robot.set_download_map_pending(action.actionId)
+                self._handle_download_map(action)
 
             else:
                 # 알 수 없는 액션은 일정 시간 후 완료
@@ -189,6 +194,35 @@ class ActionHandler:
             self._robot.map_id = map_id
         self._robot.position_initialized = True
         logger.info("위치 초기화: (%.2f, %.2f, %.2f) map=%s", x, y, theta, map_id)
+
+    def _handle_download_map(self, action: Action):
+        """맵 다운로드 시뮬레이션."""
+        map_id = ""
+        map_download_url = ""
+        map_version = ""
+        for p in action.actionParameters:
+            if p.key == "mapId":
+                map_id = p.value
+            elif p.key == "mapDownloadUrl":
+                map_download_url = p.value
+            elif p.key == "mapVersion":
+                map_version = p.value
+
+        logger.info("맵 다운로드 중: mapId=%s, version=%s, url=%s", map_id, map_version, map_download_url)
+
+        # robot.maps 업데이트 (기존 mapId가 있으면 업데이트, 없으면 추가)
+        updated = False
+        for m in self._robot.maps:
+            if m.mapId == map_id:
+                m.mapVersion = map_version
+                m.mapStatus = "ENABLED"
+                updated = True
+                break
+        if not updated:
+            self._robot.maps.append(
+                MapState(mapId=map_id, mapVersion=map_version, mapStatus="ENABLED")
+            )
+        logger.info("맵 다운로드 완료: mapId=%s, version=%s", map_id, map_version)
 
     def has_blocking_action(self) -> bool:
         """HARD 블로킹 액션이 실행 중인지 확인."""

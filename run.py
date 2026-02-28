@@ -5,6 +5,7 @@ import copy
 import logging
 import signal
 import sys
+import uuid
 from pathlib import Path
 
 # 프로젝트 루트를 Python 경로에 추가
@@ -17,7 +18,7 @@ from vda5050_simulator.robot import Robot
 from vda5050_simulator.action_handler import ActionHandler
 from vda5050_simulator.order_manager import OrderManager
 from vda5050_simulator.state_publisher import StatePublisher
-from vda5050_simulator.models import parse_instant_actions
+from vda5050_simulator.models import parse_instant_actions, Action, ActionParameter
 
 logging.basicConfig(
     level=logging.INFO,
@@ -53,10 +54,13 @@ class Simulator:
         self._mqtt = MqttClient(config)
         self._state_publisher = StatePublisher(self._robot, self._mqtt, config)
 
+        self._download_map_cfg = config.get("download_map")
+
         # MQTT 콜백 등록 (paho-mqtt 스레드에서 호출됨)
         self._mqtt.set_callbacks(
             on_order=self._handle_order,
             on_instant_actions=self._handle_instant_actions,
+            on_connection_online=self._handle_connection_online,
         )
 
         self._serial = config["robot"]["serial_number"]
@@ -74,6 +78,32 @@ class Simulator:
         else:
             logger.warning("[%s] 주문 거부됨", self._serial)
         self._state_publisher.publish_state_now()
+
+    def _handle_connection_online(self):
+        """ONLINE 연결 콜백. downloadMap 전송. (paho-mqtt 스레드에서 호출)."""
+        if self._loop and self._download_map_cfg:
+            self._loop.call_soon_threadsafe(self._trigger_download_map)
+
+    def _trigger_download_map(self):
+        """downloadMap instantAction 생성 및 실행."""
+        cfg = self._download_map_cfg
+        action_id = f"downloadMap_{uuid.uuid4().hex[:8]}"
+        action = Action(
+            actionType="downloadMap",
+            actionId=action_id,
+            blockingType="NONE",
+            actionParameters=[
+                ActionParameter(key="mapId", value=cfg["map_id"]),
+                ActionParameter(key="mapDownloadUrl", value=cfg["map_download_url"]),
+                ActionParameter(key="mapVersion", value=cfg["map_version"]),
+            ],
+        )
+        self._robot.set_download_map_pending(action_id)
+        logger.info(
+            "[%s] downloadMap 전송: mapId=%s, version=%s",
+            self._serial, cfg["map_id"], cfg["map_version"],
+        )
+        asyncio.ensure_future(self._action_handler.execute_instant_action(action))
 
     def _handle_instant_actions(self, payload: dict):
         """InstantActions 메시지 수신 콜백. (paho-mqtt 스레드에서 호출)."""
@@ -152,6 +182,7 @@ def main():
     pub_cfg = config["publishing"]
     defaults = config.get("robot_defaults", {})
     robots = config.get("robots", [])
+    download_map_cfg = config.get("download_map")
 
     if not robots:
         logger.error("robots 목록이 비어 있습니다. config.yaml을 확인하세요.")
@@ -161,6 +192,8 @@ def main():
     simulators = []
     for robot_entry in robots:
         robot_config = _build_robot_config(mqtt_cfg, pub_cfg, defaults, robot_entry)
+        if download_map_cfg:
+            robot_config["download_map"] = download_map_cfg
         simulators.append(Simulator(robot_config))
 
     logger.info("총 %d대의 로봇 시뮬레이터를 시작합니다.", len(simulators))

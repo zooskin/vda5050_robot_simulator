@@ -17,9 +17,14 @@ robots:
   - serial_number: "AGV_001"
     initial_position: { x: 8, y: -10.8, theta: 0.0, map_id: "L1" }
   - serial_number: "AGV_002"
-    initial_position: { x: 7.0, y: -2.12, theta: 0.0, map_id: "L1" }
+    initial_position: { x: 18.8, y: -7, theta: 0.0, map_id: "L1" }
   # - serial_number: "AGV_003"
   # initial_position: { x: 12, y: -10.8, theta: 0.0, map_id: "L1" }
+
+download_map:
+  map_id: "L1"
+  map_download_url: "http://example.com/map.tar.gz"
+  map_version: "2.4.1"
 
 publishing:
   state_interval: 0.5

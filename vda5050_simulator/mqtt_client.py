@@ -33,6 +33,7 @@ class MqttClient:
         self._header_ids: dict[str, int] = {}
         self._on_order: Callable | None = None
         self._on_instant_actions: Callable | None = None
+        self._on_connection_online: Callable | None = None
 
         self._client = mqtt.Client(
             callback_api_version=mqtt.CallbackAPIVersion.VERSION2,
@@ -62,9 +63,11 @@ class MqttClient:
         self,
         on_order: Callable | None = None,
         on_instant_actions: Callable | None = None,
+        on_connection_online: Callable | None = None,
     ):
         self._on_order = on_order
         self._on_instant_actions = on_instant_actions
+        self._on_connection_online = on_connection_online
 
     def connect(self):
         logger.info(
@@ -90,6 +93,8 @@ class MqttClient:
             logger.info("구독: %s, %s", order_topic, ia_topic)
             # ONLINE 발행
             self.publish_connection("ONLINE")
+            if self._on_connection_online:
+                self._on_connection_online()
         else:
             logger.error("MQTT 연결 실패: rc=%s", rc)
 
