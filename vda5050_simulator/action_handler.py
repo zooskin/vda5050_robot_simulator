@@ -31,9 +31,10 @@ ACTION_DURATIONS = {
 
 
 class ActionHandler:
-    def __init__(self, robot: Robot, order_manager: OrderManager | None = None):
+    def __init__(self, robot: Robot, order_manager: OrderManager | None = None, action_results: dict | None = None):
         self._robot = robot
         self._order_manager = order_manager
+        self._action_results = action_results or {}
         self._running_tasks: dict[str, asyncio.Task] = {}
 
     def create_action_state(self, action: Action, initial_status: str = "WAITING") -> ActionState:
@@ -111,9 +112,16 @@ class ActionHandler:
             if duration > 0:
                 await asyncio.sleep(duration)
 
-            action_state.actionStatus = "FINISHED"
-            action_state.resultDescription = f"{action_type} completed"
-            logger.info("액션 완료: %s", action.actionId)
+            # config의 action_results 설정에 따라 성공/실패 결정
+            configured_result = self._action_results.get(action_type, "FINISHED")
+            if configured_result == "FAILED":
+                action_state.actionStatus = "FAILED"
+                action_state.resultDescription = f"{action_type} failed (configured)"
+                logger.warning("액션 실패 (설정): %s", action.actionId)
+            else:
+                action_state.actionStatus = "FINISHED"
+                action_state.resultDescription = f"{action_type} completed"
+                logger.info("액션 완료: %s", action.actionId)
 
         except asyncio.CancelledError:
             action_state.actionStatus = "FAILED"

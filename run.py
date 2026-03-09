@@ -49,7 +49,10 @@ class Simulator:
         self._loop: asyncio.AbstractEventLoop | None = None
         self._robot = Robot(config)
         self._order_manager = OrderManager(self._robot)
-        self._action_handler = ActionHandler(self._robot, self._order_manager)
+        self._action_handler = ActionHandler(
+            self._robot, self._order_manager,
+            action_results=config.get("action_results", {}),
+        )
         self._robot.set_action_handler(self._action_handler)
         self._mqtt = MqttClient(config)
         self._state_publisher = StatePublisher(self._robot, self._mqtt, config)
@@ -183,6 +186,7 @@ def main():
     defaults = config.get("robot_defaults", {})
     robots = config.get("robots", [])
     download_map_cfg = config.get("download_map")
+    action_results_cfg = config.get("action_results", {})
 
     if not robots:
         logger.error("robots 목록이 비어 있습니다. config.yaml을 확인하세요.")
@@ -194,6 +198,8 @@ def main():
         robot_config = _build_robot_config(mqtt_cfg, pub_cfg, defaults, robot_entry)
         if download_map_cfg:
             robot_config["download_map"] = download_map_cfg
+        if action_results_cfg:
+            robot_config["action_results"] = action_results_cfg
         simulators.append(Simulator(robot_config))
 
     logger.info("총 %d대의 로봇 시뮬레이터를 시작합니다.", len(simulators))
