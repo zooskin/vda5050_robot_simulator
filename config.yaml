@@ -26,6 +26,19 @@ download_map:
   map_download_url: "http://example.com/map.tar.gz"
   map_version: "2.4.1"
 
+action_results:
+  pick: "FINISHED"           # FINISHED or FAILED
+  drop: "FINISHED"
+  startCharging: "FINISHED"
+  stopCharging: "FINISHED"
+  initPosition: "FINISHED"
+  finePositioning: "FINISHED"
+  startPause: "FINISHED"
+  stopPause: "FINISHED"
+  cancelOrder: "FINISHED"
+  factsheetRequest: "FINISHED"
+  downloadMap: "FINISHED"
+
 publishing:
   state_interval: 0.5
   visualization_interval: 1.0
